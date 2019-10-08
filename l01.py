@@ -33,11 +33,17 @@ def vigenere(text: str, keyword: str, decrypt=False):
     return result
 
 
+def decrypt_by_freq(ref_file, text):
+    pass
+
+
 ''' TODO
 - decrypt using char freq
 - plot char freq for comparison
 - RC4
 - bruteforce with entropy
 '''
+
+
 if __name__ == "__main__":
     main()
