@@ -28,7 +28,10 @@ def calc_char_freq(text: str, freq: dict = None):
         new = True
         freq = {}
     for char in text:
-        freq[char] += 1
+        if char not in freq.keys():
+            freq[char] = 1
+        else:
+            freq[char] += 1
     if new:
         return freq
 
@@ -44,7 +47,7 @@ def create_char_freq_from_file(filepath: str):
     freq = {}
     with open(filepath, 'r') as f:
         for line in f:
-            calc_char_freq(line, freq)
+            calc_char_freq(remove_whitespaces(line), freq)
     return freq
 
 
