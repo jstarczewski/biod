@@ -1,76 +1,91 @@
 package com.jstarczewski.knote
 
-import io.ktor.application.*
-import io.ktor.response.*
-import io.ktor.request.*
-import io.ktor.routing.*
-import io.ktor.http.*
-import io.ktor.html.*
-import kotlinx.html.*
-import kotlinx.css.*
-import freemarker.cache.*
-import io.ktor.freemarker.*
-import io.ktor.client.*
+import com.jstarczewski.knote.routes.*
+import com.jstarczewski.knote.util.Injection
+import freemarker.cache.ClassTemplateLoader
+import io.ktor.application.Application
+import io.ktor.application.call
+import io.ktor.application.install
+import io.ktor.freemarker.FreeMarker
+import io.ktor.http.ContentType
+import io.ktor.locations.KtorExperimentalLocationsAPI
+import io.ktor.locations.Location
+import io.ktor.locations.Locations
+import io.ktor.response.respondText
+import io.ktor.routing.get
+import io.ktor.routing.routing
+import io.ktor.sessions.SessionTransportTransformerMessageAuthentication
+import io.ktor.sessions.Sessions
+import io.ktor.sessions.cookie
+import io.ktor.util.KtorExperimentalAPI
+import io.ktor.util.hex
+
+
+@Location("/")
+class Index
+
+@Location("/styles/main.css")
+class MainCss
+
+@Location("/user")
+class UserPage(val error: String = "")
+
+@Location("/user/note")
+class AddNote(val error: String = "")
+
+@Location("/user/note/delete/{id}")
+class DeleteNote(val id: Long)
+
+@Location("/login")
+data class Login(val userId: String = "", val error: String = "")
+
+@Location("/logout")
+class Logout
+
+data class KnoteSession(val userId: String)
 
 fun main(args: Array<String>): Unit = io.ktor.server.netty.EngineMain.main(args)
 
+private const val UPLOAD_DIR_CONFIG_PATH = "Knote"
+private const val SESSION_NAME = "SESSION_LOG"
+private const val BASE_PACKAGE_PATH = "templates"
+
+@KtorExperimentalAPI
+private val hashKey = hex("6819b57a326945c1968f45236587")
+
+@KtorExperimentalAPI
+@KtorExperimentalLocationsAPI
 @Suppress("unused") // Referenced in application.conf
 fun Application.module() {
+
+    val uploadDir = Injection.provideUploadDir(environment.config.config(UPLOAD_DIR_CONFIG_PATH))
+    val userDb = Injection.provideUserDataSource()
+    val notesDb = Injection.provideNotesDataSource(uploadDir)
 
     install(FreeMarker) {
         templateLoader = ClassTemplateLoader(this::class.java.classLoader, "templates")
     }
+    install(Locations)
+    install(Sessions) {
+        cookie<KnoteSession>(
+            SESSION_NAME
+        ) {
+            transform(SessionTransportTransformerMessageAuthentication(hashKey))
+        }
+    }
 
     routing {
+        styles()
+        index(notesDb)
+        login(userDb)
+        logout()
+        userPage(userDb, notesDb)
+        addNote(userDb, notesDb)
+        deleteNote(userDb, notesDb)
+
         get("/") {
             call.respondText("HELLO WORLD!", contentType = ContentType.Text.Plain)
         }
-
-        get("/html-dsl") {
-            call.respondHtml {
-                body {
-                    h1 { +"HTML" }
-                    ul {
-                        for (n in 1..10) {
-                            li { +"$n" }
-                        }
-                    }
-                }
-            }
-        }
-
-        get("/styles.css") {
-            call.respondCss {
-                body {
-                    backgroundColor = Color.red
-                }
-                p {
-                    fontSize = 2.em
-                }
-                rule("p.myclass") {
-                    color = Color.blue
-                }
-            }
-        }
-
-        get("/html-freemarker") {
-            call.respond(FreeMarkerContent("index.ftl", mapOf("data" to IndexData(listOf(1, 2, 3))), ""))
-        }
     }
 }
 
-data class IndexData(val items: List<Int>)
-
-fun FlowOrMetaDataContent.styleCss(builder: CSSBuilder.() -> Unit) {
-    style(type = ContentType.Text.CSS.toString()) {
-        +CSSBuilder().apply(builder).toString()
-    }
-}
-
-fun CommonAttributeGroupFacade.style(builder: CSSBuilder.() -> Unit) {
-    this.style = CSSBuilder().apply(builder).toString().trim()
-}
-
-suspend inline fun ApplicationCall.respondCss(builder: CSSBuilder.() -> Unit) {
-    this.respondText(CSSBuilder().apply(builder).toString(), ContentType.Text.CSS)
-}
