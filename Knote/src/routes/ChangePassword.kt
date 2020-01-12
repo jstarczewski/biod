@@ -23,7 +23,7 @@ import io.ktor.sessions.sessions
 private const val EQUALITY_ERROR = "Passwords must be equal"
 private const val OLD_PASSWORD_ERROR = "Old password is wrong"
 
-fun Routing.changePassword(userDb: UserDataSource, validators: List<Validator>) {
+fun Routing.changePassword(userDb: UserDataSource, validators: List<Validator>, hash: (String) -> String) {
 
     get<ChangePassword> { pipeline ->
         with(call) {
@@ -47,23 +47,25 @@ fun Routing.changePassword(userDb: UserDataSource, validators: List<Validator>) 
             val oldPassword = post["old_password"]
             val password = post["new_password"]
             val repeatPassword = post["repeat_password"]
-            password?.run {
-                val error = ChangePassword(user.login)
-                if (user.password != oldPassword) {
-                    call.redirect(error.copy(error = OLD_PASSWORD_ERROR))
-                }
-                if (validateEquality(this, repeatPassword) == null) {
-                    call.redirect(error.copy(error = EQUALITY_ERROR))
-                }
-                validators.forEach {
-                    if (it.validate(this) == null) {
-                        call.redirect(error.copy(error = it.getValidationErrorMessage()))
+            oldPassword?.let { oldPassword ->
+                password?.run {
+                    val error = ChangePassword(user.login)
+                    if (user.password != hash(oldPassword)) {
+                        call.redirect(error.copy(error = OLD_PASSWORD_ERROR))
                     }
+                    if (validateEquality(hash(this), hash(repeatPassword!!)) == null) {
+                        call.redirect(error.copy(error = EQUALITY_ERROR))
+                    }
+                    validators.forEach {
+                        if (it.validate(this) == null) {
+                            call.redirect(error.copy(error = it.getValidationErrorMessage()))
+                        }
+                    }
+                    userDb.changePassword(user.userId, user.login, hash(password))
+                    call.redirect(UserPage())
+                } ?: run {
+                    call.redirect(UserPage())
                 }
-                userDb.changePassword(user.userId, user.login, password)
-                call.redirect(UserPage())
-            } ?: run {
-                call.redirect(UserPage())
             }
         } ?: run {
             call.redirect(Index())

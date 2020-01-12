@@ -16,13 +16,15 @@ import io.ktor.routing.Routing
 import io.ktor.sessions.get
 import io.ktor.sessions.sessions
 import io.ktor.sessions.set
+import kotlinx.coroutines.delay
+import kotlinx.coroutines.runBlocking
 
-fun Routing.login(db: UserDataSource) {
+fun Routing.login(db: UserDataSource, hash: (String) -> String, delayGenerator: () -> Long) {
 
     get<Login> {
         with(call) {
             sessions.get<KnoteSession>()?.let {
-                db.userById(it.userId.toLong())
+                db.userById(it.userId)
             }?.run {
                 redirect(UserPage())
             } ?: run {
@@ -38,9 +40,12 @@ fun Routing.login(db: UserDataSource) {
         login?.let { login ->
             password?.run {
                 val error = Login(login)
-                db.user(login, this)?.let { user ->
-                    call.sessions.set(KnoteSession(user.userId.toLong()))
-                    call.redirect(UserPage())
+                db.user(login, hash(this))?.let { user ->
+                    runBlocking {
+                        delay(delayGenerator())
+                        call.sessions.set(KnoteSession(user.userId))
+                        call.redirect(UserPage())
+                    }
                 } ?: run {
                     call.redirect(error.copy(error = "Invalid username or password"))
                 }

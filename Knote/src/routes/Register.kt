@@ -21,7 +21,7 @@ import io.ktor.sessions.sessions
 
 private const val EQUALITY_ERROR = "Passwords must be equal"
 
-fun Routing.register(userDb: UserDataSource, validators: List<Validator>) {
+fun Routing.register(userDb: UserDataSource, validators: List<Validator>, hash: (String) -> String) {
 
     get<Register> {
         with(call) {
@@ -54,7 +54,7 @@ fun Routing.register(userDb: UserDataSource, validators: List<Validator>) {
                             call.redirect(error.copy(error = it.getValidationErrorMessage(), login = login))
                         }
                     }
-                    userDb.saveUser(login, password)
+                    userDb.saveUser(login, hash(password))
                     call.redirect(UserPage())
                 }
             } ?: run {

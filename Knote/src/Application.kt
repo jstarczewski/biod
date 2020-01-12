@@ -19,6 +19,9 @@ import io.ktor.sessions.Sessions
 import io.ktor.sessions.cookie
 import io.ktor.util.KtorExperimentalAPI
 import io.ktor.util.hex
+import javax.crypto.Mac
+import javax.crypto.spec.SecretKeySpec
+import kotlin.random.Random
 
 
 @Location("/")
@@ -61,6 +64,8 @@ private const val NOTES_DIR = "note.dir"
 
 @KtorExperimentalAPI
 private val hashKey = hex("6819b57a326945c1968f45236587")
+@KtorExperimentalAPI
+val hmacKey = SecretKeySpec(hashKey, "HmacSHA1")
 
 @KtorExperimentalAPI
 @KtorExperimentalLocationsAPI
@@ -84,10 +89,13 @@ fun Application.module() {
         }
     }
 
+    val hashFunction = { s: String -> hash(s) }
+    val random = Random(hashKey.hashCode())
+
     routing {
         styles()
         index(notesDb)
-        login(userDb)
+        login(userDb, hashFunction, { random.nextLong(0, 1000) })
         logout()
         userPage(userDb, notesDb)
         addNote(userDb, notesDb)
@@ -98,7 +106,8 @@ fun Application.module() {
                 NumberValidator(),
                 LetterValidator(),
                 CapitalLetterValidator()
-            )
+            ),
+            hashFunction
         )
         changePassword(
             userDb, listOf(
@@ -106,8 +115,16 @@ fun Application.module() {
                 NumberValidator(),
                 LetterValidator(),
                 CapitalLetterValidator()
-            )
+            ),
+            hashFunction
         )
     }
+}
+
+@KtorExperimentalAPI
+fun hash(password: String): String {
+    val hmac = Mac.getInstance("HmacSHA1")
+    hmac.init(hmacKey)
+    return hex(hmac.doFinal(password.toByteArray(Charsets.UTF_8)))
 }
 
