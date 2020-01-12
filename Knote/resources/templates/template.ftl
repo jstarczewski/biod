@@ -22,9 +22,10 @@
                             <li class="nav-item"><a class="pure-button" href="/logout">Log out</a></li>
                             <li class="nav-item"><a class="pure-button" href="/user">homepage</a></li>
                             <li class="nav-item"><a class="pure-button" href="/user/note">add note</a></li>
+                            <li class="nav-item"><a class="pure-button" href="/user/password">change password</a></li>
                         <#else>
                             <li class="nav-item"><a class="pure-button" href="/login">log in</a></li>
-                            <li class="nav-item"><a class="pure-button" href="/user/upload">register</a></li>
+                            <li class="nav-item"><a class="pure-button" href="/register">register</a></li>
                             <li class="nav-item"><a class="pure-button" href="/">homepage</a></li>
                         </#if>
                     </ul>

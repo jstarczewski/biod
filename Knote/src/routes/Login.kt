@@ -1,10 +1,9 @@
 package com.jstarczewski.knote.routes
 
-import com.jstarczewski.knote.Index
 import com.jstarczewski.knote.KnoteSession
 import com.jstarczewski.knote.Login
 import com.jstarczewski.knote.UserPage
-import com.jstarczewski.knote.routes.db.user.UserDataSource
+import com.jstarczewski.knote.db.user.UserDataSource
 import com.jstarczewski.knote.util.redirect
 import io.ktor.application.call
 import io.ktor.freemarker.FreeMarkerContent
@@ -23,7 +22,7 @@ fun Routing.login(db: UserDataSource) {
     get<Login> {
         with(call) {
             sessions.get<KnoteSession>()?.let {
-                db.userById(it.userId)
+                db.userById(it.userId.toLong())
             }?.run {
                 redirect(UserPage())
             } ?: run {
@@ -40,7 +39,7 @@ fun Routing.login(db: UserDataSource) {
             password?.run {
                 val error = Login(login)
                 db.user(login, this)?.let { user ->
-                    call.sessions.set(KnoteSession(user.userId))
+                    call.sessions.set(KnoteSession(user.userId.toLong()))
                     call.redirect(UserPage())
                 } ?: run {
                     call.redirect(error.copy(error = "Invalid username or password"))

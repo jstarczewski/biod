@@ -2,7 +2,7 @@ package com.jstarczewski.knote.util
 
 import com.jstarczewski.knote.KnoteSession
 import com.jstarczewski.knote.db.model.User
-import com.jstarczewski.knote.routes.db.user.UserDataSource
+import com.jstarczewski.knote.db.user.UserDataSource
 import io.ktor.application.ApplicationCall
 import io.ktor.application.call
 import io.ktor.locations.locations
@@ -41,6 +41,10 @@ fun List<String>.toLongList() =
         }
     }
 
+
+fun validateEquality(password: String, repeatedPassword: String?) =
+    if (password == repeatedPassword) password else null
+
 private const val extensionType = "idx"
 
 private val digitsOnlyRegex = "\\d+".toRegex()
@@ -58,6 +62,6 @@ suspend fun ApplicationCall.redirect(location: Any) {
 }
 
 suspend fun PipelineContext<Unit, ApplicationCall>.withSession(db: UserDataSource, block: suspend (User) -> Unit) =
-    call.sessions.get<KnoteSession>()?.let { db.userById(it.userId) }?.let {
+    call.sessions.get<KnoteSession>()?.let { db.userById(it.userId.toLong()) }?.let {
         block(it)
     }

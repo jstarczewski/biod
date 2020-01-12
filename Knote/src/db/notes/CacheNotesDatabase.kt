@@ -9,7 +9,8 @@ import java.io.File
 abstract class CacheNotesDatabase(uploadDir: File) : BaseDatabase<Note>(uploadDir) {
 
     companion object {
-        private const val NOTE_ALIAS = "PDF_ALIAS"
+
+        private const val NOTE_ALIAS = "NOTE_ALIAS"
     }
 
     override val cache: Cache<Long, Note> = cacheManager.createCache<Long, Note>(
