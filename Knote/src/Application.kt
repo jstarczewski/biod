@@ -13,12 +13,14 @@ import io.ktor.freemarker.FreeMarker
 import io.ktor.locations.KtorExperimentalLocationsAPI
 import io.ktor.locations.Location
 import io.ktor.locations.Locations
+import io.ktor.network.tls.certificates.generateCertificate
 import io.ktor.routing.routing
 import io.ktor.sessions.SessionTransportTransformerMessageAuthentication
 import io.ktor.sessions.Sessions
 import io.ktor.sessions.cookie
 import io.ktor.util.KtorExperimentalAPI
 import io.ktor.util.hex
+import java.io.File
 import javax.crypto.Mac
 import javax.crypto.spec.SecretKeySpec
 import kotlin.random.Random
@@ -53,8 +55,6 @@ class Logout
 
 data class KnoteSession(val userId: Long)
 
-fun main(args: Array<String>): Unit = io.ktor.server.netty.EngineMain.main(args)
-
 private const val UPLOAD_DIR_CONFIG_PATH = "Knote"
 private const val SESSION_NAME = "SESSION_LOG"
 private const val BASE_PACKAGE_PATH = "templates"
@@ -66,6 +66,8 @@ private const val NOTES_DIR = "note.dir"
 private val hashKey = hex("6819b57a326945c1968f45236587")
 @KtorExperimentalAPI
 val hmacKey = SecretKeySpec(hashKey, "HmacSHA1")
+
+fun main(args: Array<String>): Unit = io.ktor.server.netty.EngineMain.main(args)
 
 @KtorExperimentalAPI
 @KtorExperimentalLocationsAPI
@@ -128,3 +130,17 @@ fun hash(password: String): String {
     return hex(hmac.doFinal(password.toByteArray(Charsets.UTF_8)))
 }
 
+object CertificateGenerator {
+
+    @JvmStatic
+    fun main(args: Array<String>) {
+        val jksFile = File("build/temporary.jks").apply {
+            parentFile.mkdirs()
+        }
+
+        if (!jksFile.exists()) {
+            generateCertificate(jksFile) // Generates the certificate
+        }
+        io.ktor.server.netty.EngineMain.main(args)
+    }
+}
