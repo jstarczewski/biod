@@ -3,6 +3,7 @@ package com.jstarczewski.knote.routes
 import com.jstarczewski.knote.KnoteSession
 import com.jstarczewski.knote.Login
 import com.jstarczewski.knote.UserPage
+import com.jstarczewski.knote.credentials.Validator
 import com.jstarczewski.knote.db.user.UserDataSource
 import com.jstarczewski.knote.util.redirect
 import io.ktor.application.call
@@ -19,7 +20,14 @@ import io.ktor.sessions.set
 import kotlinx.coroutines.delay
 import kotlinx.coroutines.runBlocking
 
-fun Routing.login(db: UserDataSource, hash: (String) -> String, delayGenerator: () -> Long) {
+private const val GENERIC_CREDENTIALS_ERROR = "Invalid credentials"
+
+fun Routing.login(
+    db: UserDataSource,
+    checkPassword: (String, ByteArray, String) -> Boolean,
+    loginValidators: List<Validator>,
+    delayGenerator: () -> Long
+) {
 
     get<Login> {
         with(call) {
@@ -38,24 +46,39 @@ fun Routing.login(db: UserDataSource, hash: (String) -> String, delayGenerator: 
         val login = post["login"]
         val password = post["password"]
         login?.let { login ->
-            password?.run {
-                val error = Login(login)
-                db.user(login, hash(this))?.let { user ->
-                    runBlocking {
-                        delay(delayGenerator())
-                        call.sessions.set(KnoteSession(user.userId))
-                        call.redirect(UserPage())
-                    }
-                } ?: run {
-                    call.redirect(error.copy(error = "Invalid username or password"))
+            val error = Login(error = login)
+            var containsLoginErrors = false
+            loginValidators.forEach {
+                if (it.validate(login) == null) {
+                    call.redirect(error.copy(error = it.getValidationErrorMessage()))
+                    containsLoginErrors = true
                 }
-            } ?: run {
-                val error = Login(login)
-                call.redirect(error.copy(error = "Unexpected Error appeared"))
+            }
+            if (!containsLoginErrors) {
+                password?.run {
+                    val error = Login(login)
+                    db.userByLogin(login)?.let { user ->
+                        if (checkPassword(password, user.salt, user.password))
+                            runBlocking {
+                                delay(delayGenerator())
+                                call.sessions.set(KnoteSession(user.userId))
+                                call.redirect(UserPage())
+                            }
+                        else {
+                            call.redirect(error.copy(error = GENERIC_CREDENTIALS_ERROR))
+                        }
+                    } ?: run {
+                        call.redirect(error.copy(error = GENERIC_CREDENTIALS_ERROR))
+                    }
+
+                } ?: run {
+                    val error = Login(login)
+                    call.redirect(error.copy(error = GENERIC_CREDENTIALS_ERROR))
+                }
             }
         } ?: run {
             val error = Login("null")
-            call.redirect(error.copy(error = "Invalid username or password"))
+            call.redirect(error.copy(error = GENERIC_CREDENTIALS_ERROR))
         }
     }
 }

@@ -5,7 +5,7 @@ import com.jstarczewski.knote.Index
 import com.jstarczewski.knote.KnoteSession
 import com.jstarczewski.knote.UserPage
 import com.jstarczewski.knote.db.user.UserDataSource
-import com.jstarczewski.knote.password.Validator
+import com.jstarczewski.knote.credentials.Validator
 import com.jstarczewski.knote.util.redirect
 import com.jstarczewski.knote.util.validateEquality
 import com.jstarczewski.knote.util.withSession
@@ -21,16 +21,21 @@ import io.ktor.sessions.get
 import io.ktor.sessions.sessions
 
 private const val EQUALITY_ERROR = "Passwords must be equal"
-private const val OLD_PASSWORD_ERROR = "Old password is wrong"
+private const val OLD_PASSWORD_ERROR = "Old credentials is wrong"
 
-fun Routing.changePassword(userDb: UserDataSource, validators: List<Validator>, hash: (String) -> String) {
+fun Routing.changePassword(
+    userDb: UserDataSource,
+    validators: List<Validator>,
+    checkPassword: (String, ByteArray, String) -> Boolean,
+    hashFunction: (String) -> Pair<String, ByteArray>
+) {
 
     get<ChangePassword> { pipeline ->
         with(call) {
             sessions.get<KnoteSession>()?.let {
                 respond(
                     FreeMarkerContent(
-                        "password.ftl", mapOf(
+                        "credentials.ftl", mapOf(
                             "error" to pipeline.error
                         ), ""
                     )
@@ -50,10 +55,10 @@ fun Routing.changePassword(userDb: UserDataSource, validators: List<Validator>, 
             oldPassword?.let { oldPassword ->
                 password?.run {
                     val error = ChangePassword(user.login)
-                    if (user.password != hash(oldPassword)) {
+                    if (!checkPassword(oldPassword, user.salt, user.password)) {
                         call.redirect(error.copy(error = OLD_PASSWORD_ERROR))
                     }
-                    if (validateEquality(hash(this), hash(repeatPassword!!)) == null) {
+                    if (validateEquality(this, repeatPassword) == null) {
                         call.redirect(error.copy(error = EQUALITY_ERROR))
                     }
                     validators.forEach {
@@ -61,7 +66,8 @@ fun Routing.changePassword(userDb: UserDataSource, validators: List<Validator>, 
                             call.redirect(error.copy(error = it.getValidationErrorMessage()))
                         }
                     }
-                    userDb.changePassword(user.userId, user.login, hash(password))
+                    val data = hashFunction(password)
+                    userDb.changePassword(user.userId, user.login, data.first, data.second)
                     call.redirect(UserPage())
                 } ?: run {
                     call.redirect(UserPage())

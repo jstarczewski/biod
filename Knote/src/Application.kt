@@ -1,14 +1,18 @@
 package com.jstarczewski.knote
 
+import com.jstarczewski.knote.credentials.validators.PlainTextAndNumbersValidator
+import com.jstarczewski.knote.credentials.validators.WhitespaceValidator
 import com.jstarczewski.knote.password.validators.CapitalLetterValidator
 import com.jstarczewski.knote.password.validators.LengthValidator
 import com.jstarczewski.knote.password.validators.LetterValidator
 import com.jstarczewski.knote.password.validators.NumberValidator
 import com.jstarczewski.knote.routes.*
+import com.jstarczewski.knote.util.HashGenerator
 import com.jstarczewski.knote.util.Injection
 import freemarker.cache.ClassTemplateLoader
 import io.ktor.application.Application
 import io.ktor.application.install
+import io.ktor.features.XForwardedHeaderSupport
 import io.ktor.freemarker.FreeMarker
 import io.ktor.locations.KtorExperimentalLocationsAPI
 import io.ktor.locations.Location
@@ -21,8 +25,6 @@ import io.ktor.sessions.cookie
 import io.ktor.util.KtorExperimentalAPI
 import io.ktor.util.hex
 import java.io.File
-import javax.crypto.Mac
-import javax.crypto.spec.SecretKeySpec
 import kotlin.random.Random
 
 
@@ -47,7 +49,7 @@ data class Login(val userId: String = "", val error: String = "")
 @Location("/register")
 data class Register(val login: String = "", val error: String = "")
 
-@Location("user/password")
+@Location("user/credentials")
 data class ChangePassword(val error: String = "")
 
 @Location("/logout")
@@ -61,11 +63,8 @@ private const val BASE_PACKAGE_PATH = "templates"
 
 private const val USERS_DIR = "user.dir"
 private const val NOTES_DIR = "note.dir"
+private const val SESSION_KEY = "sessionKey"
 
-@KtorExperimentalAPI
-private val hashKey = hex("6819b57a326945c1968f45236587")
-@KtorExperimentalAPI
-val hmacKey = SecretKeySpec(hashKey, "HmacSHA1")
 
 fun main(args: Array<String>): Unit = io.ktor.server.netty.EngineMain.main(args)
 
@@ -79,10 +78,13 @@ fun Application.module() {
     val userDb = Injection.provideUserDataSource(usersUploadDir)
     val notesDb = Injection.provideNotesDataSource(notesUploadDir)
 
+    val hashKey = hex(environment.config.config(UPLOAD_DIR_CONFIG_PATH).property(SESSION_KEY).getString())
+
     install(FreeMarker) {
-        templateLoader = ClassTemplateLoader(this::class.java.classLoader, "templates")
+        templateLoader = ClassTemplateLoader(this::class.java.classLoader, BASE_PACKAGE_PATH)
     }
     install(Locations)
+    install(XForwardedHeaderSupport)
     install(Sessions) {
         cookie<KnoteSession>(
             SESSION_NAME
@@ -90,25 +92,44 @@ fun Application.module() {
             transform(SessionTransportTransformerMessageAuthentication(hashKey))
         }
     }
-
-    val hashFunction = { s: String -> hash(s) }
+    val hashGenerator = HashGenerator()
+    val hashFunction = { s: String -> hashGenerator.getHashedPassword(s) }
+    val checkPassword =
+        { password: String, salt: ByteArray, hashedPassword: String ->
+            hashGenerator.checkPasswords(password, salt, hashedPassword)
+        }
     val random = Random(hashKey.hashCode())
+
+    val passwordValidators =
+        listOf(
+            LengthValidator(),
+            NumberValidator(),
+            LetterValidator(),
+            WhitespaceValidator(),
+            CapitalLetterValidator()
+        )
+
+    val loginValidators = listOf(
+        PlainTextAndNumbersValidator()
+    )
 
     routing {
         styles()
         index(notesDb)
-        login(userDb, hashFunction, { random.nextLong(0, 1000) })
+        login(
+            userDb,
+            checkPassword,
+            loginValidators,
+            { random.nextLong(0, 3000) }
+        )
         logout()
         userPage(userDb, notesDb)
         addNote(userDb, notesDb)
         deleteNote(userDb, notesDb)
         register(
-            userDb, listOf(
-                LengthValidator(),
-                NumberValidator(),
-                LetterValidator(),
-                CapitalLetterValidator()
-            ),
+            userDb,
+            passwordValidators,
+            loginValidators,
             hashFunction
         )
         changePassword(
@@ -116,18 +137,13 @@ fun Application.module() {
                 LengthValidator(),
                 NumberValidator(),
                 LetterValidator(),
+                WhitespaceValidator(),
                 CapitalLetterValidator()
             ),
+            checkPassword,
             hashFunction
         )
     }
-}
-
-@KtorExperimentalAPI
-fun hash(password: String): String {
-    val hmac = Mac.getInstance("HmacSHA1")
-    hmac.init(hmacKey)
-    return hex(hmac.doFinal(password.toByteArray(Charsets.UTF_8)))
 }
 
 object CertificateGenerator {

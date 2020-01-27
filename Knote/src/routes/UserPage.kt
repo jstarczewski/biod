@@ -2,6 +2,7 @@ package com.jstarczewski.knote.routes
 
 import com.jstarczewski.knote.Index
 import com.jstarczewski.knote.UserPage
+import com.jstarczewski.knote.db.UserTile
 import com.jstarczewski.knote.db.notes.NotesDataSource
 import com.jstarczewski.knote.db.user.UserDataSource
 import com.jstarczewski.knote.util.redirect
@@ -20,7 +21,7 @@ fun Routing.userPage(userDb: UserDataSource, notesDb: NotesDataSource) {
             call.respond(
                 FreeMarkerContent(
                     "userpage.ftl",
-                    mapOf("all" to notes, "user" to user, "error" to it.error)
+                    mapOf("all" to notes, "user" to UserTile.from(user), "error" to it.error)
                 )
             )
         } ?: run {

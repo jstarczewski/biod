@@ -41,6 +41,9 @@ fun List<String>.toLongList() =
         }
     }
 
+fun List<*>.secondOrNull() = tryOrNull { this[1] }
+
+fun List<*>.firstOrNull() = tryOrNull { this[0] }
 
 fun validateEquality(password: String, repeatedPassword: String?) =
     if (password == repeatedPassword) password else null
@@ -55,10 +58,10 @@ fun File.getAllIds(extension: String = extensionType) =
 
 suspend fun ApplicationCall.redirect(location: Any) {
     val host = request.host() ?: "localhost"
-    val portSpec = request.port().let { if (it == 80) "" else ":$it" }
+    val portSpec = request.port().let { if (it == 5000) "" else ":$it" }
     val address = host + portSpec
 
-    respondRedirect("http://$address${application.locations.href(location)}")
+    respondRedirect("https://$address${application.locations.href(location)}")
 }
 
 suspend fun PipelineContext<Unit, ApplicationCall>.withSession(db: UserDataSource, block: suspend (User) -> Unit) =

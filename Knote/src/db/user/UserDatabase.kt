@@ -19,6 +19,7 @@ class UserDatabase(private val uploadDir: File) : CacheUserDatabase(uploadDir), 
             USER_ID,
             USER_NAME,
             PASSWORD
+            , "".toByteArray()
         )
     )
 
@@ -35,9 +36,9 @@ class UserDatabase(private val uploadDir: File) : CacheUserDatabase(uploadDir), 
             }
     }
 
-    override fun saveUser(login: String, password: String): Boolean {
+    override fun saveUser(login: String, password: String, salt: ByteArray): Boolean {
         val id = nextId()
-        val user = User(id, login, password)
+        val user = User(id, login, password, salt)
         File(uploadDir, id.toString() + NOTE_JSON_FILE_APPENDIX).writeText(gson.toJson(user))
         allIds.add(id)
         cache.put(id, user)
@@ -49,8 +50,8 @@ class UserDatabase(private val uploadDir: File) : CacheUserDatabase(uploadDir), 
         .mapNotNull { userById(it) }
         .find { it.login == login && it.password == password }
 
-    override fun changePassword(id: Long, login: String, password: String) {
-        val user = User(id, login, password)
+    override fun changePassword(id: Long, login: String, password: String, salt: ByteArray) {
+        val user = User(id, login, password, salt)
         File(uploadDir, id.toString() + NOTE_JSON_FILE_APPENDIX).writeText(gson.toJson(user))
         cache.replace(id, user)
     }

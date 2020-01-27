@@ -8,9 +8,9 @@ interface UserDataSource {
 
     fun userById(id: Long): User?
 
-    fun saveUser(login: String, password: String): Boolean
+    fun saveUser(login: String, password: String, salt: ByteArray): Boolean
 
     fun user(login: String, password: String): User?
 
-    fun changePassword(id: Long, login: String, password: String)
+    fun changePassword(id: Long, login: String, password: String, salt: ByteArray)
 }

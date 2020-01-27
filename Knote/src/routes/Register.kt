@@ -4,8 +4,8 @@ import com.jstarczewski.knote.KnoteSession
 import com.jstarczewski.knote.Login
 import com.jstarczewski.knote.Register
 import com.jstarczewski.knote.UserPage
+import com.jstarczewski.knote.credentials.Validator
 import com.jstarczewski.knote.db.user.UserDataSource
-import com.jstarczewski.knote.password.Validator
 import com.jstarczewski.knote.util.redirect
 import com.jstarczewski.knote.util.validateEquality
 import io.ktor.application.call
@@ -21,7 +21,13 @@ import io.ktor.sessions.sessions
 
 private const val EQUALITY_ERROR = "Passwords must be equal"
 
-fun Routing.register(userDb: UserDataSource, validators: List<Validator>, hash: (String) -> String) {
+
+fun Routing.register(
+    userDb: UserDataSource,
+    passwordValidators: List<Validator>,
+    loginValidators: List<Validator>,
+    hash: (String) -> Pair<String, ByteArray>
+) {
 
     get<Register> {
         with(call) {
@@ -41,29 +47,43 @@ fun Routing.register(userDb: UserDataSource, validators: List<Validator>, hash: 
         val password = post["password"]
         val repeatPassowrd = post["repeat_password"]
         login?.let { login ->
-            password?.run {
-                val error = Register(login)
-                userDb.userByLogin(login)?.let { user ->
-                    call.redirect(error.copy(error = "User already exists"))
-                } ?: run {
-                    if (validateEquality(password, repeatPassowrd) == null) {
-                        call.redirect(error.copy(error = EQUALITY_ERROR, login = login))
-                    }
-                    validators.forEach {
-                        if (it.validate(password) == null) {
-                            call.redirect(error.copy(error = it.getValidationErrorMessage(), login = login))
+            val error = Register(login)
+            var containsLoginErrors = false
+            loginValidators.forEach {
+                if (it.validate(login) == null) {
+                    call.redirect(error.copy(error = it.getValidationErrorMessage(), login = login))
+                    containsLoginErrors = true
+                }
+            }
+            if (!containsLoginErrors) {
+                password?.run {
+                    var containsPasswordErrors = false
+                    userDb.userByLogin(login)?.let { user ->
+                        call.redirect(error.copy(error = "User already exists"))
+                    } ?: run {
+                        if (validateEquality(password, repeatPassowrd) == null) {
+                            call.redirect(error.copy(error = EQUALITY_ERROR, login = login))
+                        }
+                        passwordValidators.forEach {
+                            if (it.validate(password) == null) {
+                                call.redirect(error.copy(error = it.getValidationErrorMessage(), login = login))
+                                containsPasswordErrors = true
+                            }
+                        }
+                        if (containsPasswordErrors.not()) {
+                            val credentials = hash(password)
+                            userDb.saveUser(login, credentials.first, credentials.second)
+                            call.redirect(UserPage())
                         }
                     }
-                    userDb.saveUser(login, hash(password))
-                    call.redirect(UserPage())
+                } ?: run {
+                    val error = Register(login)
+                    call.redirect(error.copy(error = "Unexpected Error appeared"))
                 }
-            } ?: run {
-                val error = Register(login)
-                call.redirect(error.copy(error = "Unexpected Error appeared"))
             }
         } ?: run {
             val error = Login("null")
-            call.redirect(error.copy(error = "Invalid username or password"))
+            call.redirect(error.copy(error = "Invalid username or credentials"))
         }
     }
 }

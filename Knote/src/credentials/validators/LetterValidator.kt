@@ -1,6 +1,6 @@
 package com.jstarczewski.knote.password.validators
 
-import com.jstarczewski.knote.password.Validator
+import com.jstarczewski.knote.credentials.Validator
 
 class LetterValidator : Validator {
 
@@ -9,8 +9,8 @@ class LetterValidator : Validator {
         private const val LETTER_VALIDATOR = "Password must contain lower-case letter"
     }
 
-    override fun validate(password: String) =
-        if (password.matches(Regex(".*[a-z].*"))) password else null
+    override fun validate(credential: String) =
+        if (credential.matches(Regex(".*[a-z].*"))) credential else null
 
     override fun getValidationErrorMessage() =
         LETTER_VALIDATOR

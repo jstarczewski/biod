@@ -1,4 +1,4 @@
-<#-- @ftlvariable name="user" type="com.jstarczewski.knote.db.model.User" -->
+<#-- @ftlvariable name="user" type="com.jstarczewski.knote.db.UserTile" -->
 
 <#macro mainLayout title="Welcome">
     <!DOCTYPE html>
@@ -7,8 +7,6 @@
         <meta http-equiv="Content-Type" content="text/html; charset=UTF-8">
 
         <title>${title} | Knote</title>
-        <link rel="stylesheet" type="text/css" href="http://yui.yahooapis.com/pure/0.6.0/pure-min.css">
-        <link rel="stylesheet" type="text/css" href="http://yui.yahooapis.com/pure/0.6.0/grids-responsive-min.css">
         <link rel="stylesheet" type="text/css" href="/styles/main.css">
     </head>
     <body>
@@ -22,7 +20,8 @@
                             <li class="nav-item"><a class="pure-button" href="/logout">Log out</a></li>
                             <li class="nav-item"><a class="pure-button" href="/user">homepage</a></li>
                             <li class="nav-item"><a class="pure-button" href="/user/note">add note</a></li>
-                            <li class="nav-item"><a class="pure-button" href="/user/password">change password</a></li>
+                            <li class="nav-item"><a class="pure-button" href="/user/password">change credentials</a>
+                            </li>
                         <#else>
                             <li class="nav-item"><a class="pure-button" href="/login">log in</a></li>
                             <li class="nav-item"><a class="pure-button" href="/register">register</a></li>
