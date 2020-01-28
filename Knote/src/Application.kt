@@ -3,6 +3,7 @@ package com.jstarczewski.knote
 import com.jstarczewski.knote.credentials.validators.PlainTextAndNumbersValidator
 import com.jstarczewski.knote.credentials.validators.WhitespaceValidator
 import com.jstarczewski.knote.credentials.validators.CapitalLetterValidator
+import com.jstarczewski.knote.credentials.validators.EmptyValidator
 import com.jstarczewski.knote.password.validators.LengthValidator
 import com.jstarczewski.knote.password.validators.LetterValidator
 import com.jstarczewski.knote.password.validators.NumberValidator
@@ -102,6 +103,7 @@ fun Application.module() {
 
     val passwordValidators =
         listOf(
+            EmptyValidator(),
             LengthValidator(),
             NumberValidator(),
             LetterValidator(),
@@ -110,6 +112,7 @@ fun Application.module() {
         )
 
     val loginValidators = listOf(
+        EmptyValidator(),
         PlainTextAndNumbersValidator()
     )
 
