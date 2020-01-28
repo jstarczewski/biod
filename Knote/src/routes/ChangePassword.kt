@@ -35,7 +35,7 @@ fun Routing.changePassword(
             sessions.get<KnoteSession>()?.let {
                 respond(
                     FreeMarkerContent(
-                        "credentials.ftl", mapOf(
+                        "password.ftl", mapOf(
                             "error" to pipeline.error
                         ), ""
                     )

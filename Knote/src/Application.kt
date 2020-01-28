@@ -2,7 +2,7 @@ package com.jstarczewski.knote
 
 import com.jstarczewski.knote.credentials.validators.PlainTextAndNumbersValidator
 import com.jstarczewski.knote.credentials.validators.WhitespaceValidator
-import com.jstarczewski.knote.password.validators.CapitalLetterValidator
+import com.jstarczewski.knote.credentials.validators.CapitalLetterValidator
 import com.jstarczewski.knote.password.validators.LengthValidator
 import com.jstarczewski.knote.password.validators.LetterValidator
 import com.jstarczewski.knote.password.validators.NumberValidator
@@ -49,7 +49,7 @@ data class Login(val userId: String = "", val error: String = "")
 @Location("/register")
 data class Register(val login: String = "", val error: String = "")
 
-@Location("user/credentials")
+@Location("/user/password")
 data class ChangePassword(val error: String = "")
 
 @Location("/logout")

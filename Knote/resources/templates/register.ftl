@@ -24,7 +24,7 @@
             <input type="password" name="password" id="password">
         </label>
 
-        <label for="repeat_password">Repeat credentials
+        <label for="repeat_password">Repeat password
             <input type="password" name="repeat_password" id="repeat_password">
         </label>
 

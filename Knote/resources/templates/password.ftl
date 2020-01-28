@@ -9,15 +9,15 @@
             <p class="error">${error}</p>
         </#if>
 
-        <label for="old_password">Old credentials
+        <label for="old_password">Old password
             <input type="password" name="old_password" id="old_password">
         </label>
 
-        <label for="new_password">New credentials
+        <label for="new_password">New password
             <input type="password" name="new_password" id="new_password">
         </label>
 
-        <label for="repeat_password">Repeat new credentials
+        <label for="repeat_password">Repeat new password
             <input type="password" name="repeat_password" id="repeat_password">
         </label>
 

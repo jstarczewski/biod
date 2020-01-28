@@ -1,4 +1,4 @@
-package com.jstarczewski.knote.password.validators
+package com.jstarczewski.knote.credentials.validators
 
 import com.jstarczewski.knote.credentials.Validator
 
@@ -6,7 +6,7 @@ class CapitalLetterValidator : Validator {
 
     companion object {
 
-        private const val CAPITAL_LETTER_ERROR = "Password must contain at leas one capital letter"
+        private const val CAPITAL_LETTER_ERROR = "Password must contain at least one capital letter"
     }
 
     override fun validate(credential: String) =

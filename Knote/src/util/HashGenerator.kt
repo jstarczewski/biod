@@ -11,6 +11,7 @@ class HashGenerator {
         private const val ALGORITHM = "SHA-512"
         private const val STRING_FORMAT = "%02x"
         private const val BYTE_ARRAY_SIZE = 16
+        private const val HASH_ITERATIONS = 16
     }
 
     private val messageDigest = MessageDigest.getInstance(ALGORITHM)
@@ -26,7 +27,7 @@ class HashGenerator {
         val salt = generateRandomSalt()
         messageDigest.update(salt)
         var hashedPassword = messageDigest.digest(password.toByteArray(StandardCharsets.UTF_8))
-        for (x in 0..password.length) {
+        for (x in 0..HASH_ITERATIONS) {
             hashedPassword = messageDigest.digest(hashedPassword)
         }
         val stringBuilder = StringBuilder()
@@ -39,7 +40,7 @@ class HashGenerator {
     fun checkPasswords(password: String, salt: ByteArray, hashedPassword: String): Boolean {
         messageDigest.update(salt)
         var newHashedPassword = messageDigest.digest(password.toByteArray(StandardCharsets.UTF_8))
-        for (x in 0..password.length) {
+        for (x in 0..HASH_ITERATIONS) {
             newHashedPassword = messageDigest.digest(newHashedPassword)
         }
         val stringBuilder = StringBuilder()
